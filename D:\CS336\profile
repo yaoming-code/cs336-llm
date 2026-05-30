@@ -1,0 +1,38 @@
+         2074744 function calls (2074622 primitive calls) in 1.744 seconds
+
+   Ordered by: cumulative time
+   List reduced from 425 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.019    0.019    1.743    1.743 /home/ym/cs336/assignment1-basics/cs336_basics/bpe.py:32(bpe)
+      243    0.754    0.003    0.809    0.003 /home/ym/cs336/assignment1-basics/cs336_basics/bpe.py:84(count_pair)
+      243    0.685    0.003    0.691    0.003 /home/ym/cs336/assignment1-basics/cs336_basics/bpe.py:98(apply_merge)
+      243    0.001    0.000    0.164    0.001 /home/ym/cs336/assignment1-basics/cs336_basics/bpe.py:94(find_largest_pair)
+      264    0.088    0.000    0.163    0.001 {built-in method builtins.max}
+   836665    0.075    0.000    0.075    0.000 /home/ym/cs336/assignment1-basics/cs336_basics/bpe.py:95(<lambda>)
+        1    0.000    0.000    0.060    0.060 /usr/lib/python3.12/multiprocessing/pool.py:738(__exit__)
+  1173472    0.056    0.000    0.056    0.000 {built-in method builtins.len}
+        1    0.000    0.000    0.054    0.054 /usr/lib/python3.12/multiprocessing/pool.py:654(terminate)
+        9    0.000    0.000    0.045    0.005 /usr/lib/python3.12/multiprocessing/util.py:208(__call__)
+        1    0.000    0.000    0.045    0.045 /usr/lib/python3.12/multiprocessing/pool.py:680(_terminate_pool)
+        1    0.000    0.000    0.045    0.045 /usr/lib/python3.12/multiprocessing/pool.py:671(_help_stuff_finish)
+        1    0.001    0.001    0.044    0.044 {method 'acquire' of '_multiprocessing.SemLock' objects}
+        9    0.000    0.000    0.044    0.005 /usr/lib/python3.12/multiprocessing/connection.py:202(send)
+      3/1    0.000    0.000    0.043    0.043 /usr/lib/python3.12/threading.py:1016(_bootstrap)
+      3/1    0.000    0.000    0.043    0.043 /usr/lib/python3.12/threading.py:1056(_bootstrap_inner)
+      3/1    0.000    0.000    0.043    0.043 /usr/lib/python3.12/threading.py:999(run)
+        1    0.000    0.000    0.043    0.043 /usr/lib/python3.12/multiprocessing/pool.py:527(_handle_tasks)
+     14/9    0.000    0.000    0.043    0.005 /usr/lib/python3.12/multiprocessing/connection.py:406(_send_bytes)
+      5/4    0.000    0.000    0.043    0.011 /usr/lib/python3.12/multiprocessing/queues.py:391(put)
+      5/4    0.000    0.000    0.043    0.011 /usr/lib/python3.12/multiprocessing/connection.py:182(send_bytes)
+        1    0.000    0.000    0.042    0.042 /usr/lib/python3.12/multiprocessing/pool.py:573(_handle_results)
+        1    0.000    0.000    0.041    0.041 /usr/lib/python3.12/multiprocessing/pool.py:362(map)
+        9    0.000    0.000    0.039    0.004 /usr/lib/python3.12/multiprocessing/pool.py:500(_wait_for_updates)
+       21    0.000    0.000    0.038    0.002 /usr/lib/python3.12/multiprocessing/connection.py:1122(wait)
+       21    0.000    0.000    0.038    0.002 /usr/lib/python3.12/selectors.py:402(select)
+       21    0.037    0.002    0.038    0.002 {method 'poll' of 'select.poll' objects}
+     18/4    0.000    0.000    0.007    0.002 <frozen importlib._bootstrap>:1349(_find_and_load)
+        1    0.000    0.000    0.007    0.007 /usr/lib/python3.12/multiprocessing/pool.py:305(_repopulate_pool)
+        1    0.001    0.001    0.007    0.007 /usr/lib/python3.12/multiprocessing/pool.py:314(_repopulate_pool_static)
+
+
