@@ -7,16 +7,16 @@ from typing import Optional
 from collections.abc import Callable, Iterable
 
 class Linear(nn.Module):
-    def __init__(self, in_features, out_features, device=None, dtype=None):
+    def __init__(self, in_features, out_features, device=None):
         super().__init__()
-        self.W = nn.Parameter(torch.empty(out_features, in_features))
+        self.W = nn.Parameter(torch.empty(out_features, in_features, device = device))
         sigma = math.sqrt(2/(in_features+out_features))
         nn.init.trunc_normal_(self.W, mean=0, std=sigma, a=-3*sigma, b=3*sigma)
     def forward(self, x):
         return einsum(x, self.W, "... i, o i -> ... o")
     
 class Embedding(nn.Module):
-    def __init__(self, num_embeddings, embedding_dim, device=None, dtype=None):
+    def __init__(self, num_embeddings, embedding_dim):
         super().__init__()
         self.embedding = nn.Parameter(torch.empty(num_embeddings, embedding_dim))
         self.embedding = torch.nn.init.trunc_normal_(self.embedding, 0, 1, a=-3, b=3)
@@ -24,13 +24,14 @@ class Embedding(nn.Module):
         return self.embedding[token_ids]
 
 class RMSNorm(nn.Module):
-    def __init__(self, d_model: int, eps: float = 1e-5, device=None, dtype=None):
+    def __init__(self, d_model: int, eps: float = 1e-5):
         super().__init__()
+        self.eps = eps
         self.weight = nn.Parameter(torch.ones(d_model))
     def forward(self, x: torch.tensor) -> torch.tensor:
         in_dtype = x.dtype
         x = x.to(torch.float32)
-        RMS = torch.sqrt(reduce(x**2 , "b s d -> b s 1", 'mean'))
+        RMS = torch.sqrt((reduce(x**2 , "b s d -> b s 1", 'mean')) + self.eps)
         x = x / RMS
         x = einsum(x, self.weight, "b s d, d -> b s d")
         result = x.to(in_dtype)
@@ -50,11 +51,17 @@ class SWiGLU(nn.Module):
         x = einsum(self.W2, x, "dm df, b s df -> b s dm")
         return x
 
+class SiLU(nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x * torch.sigmoid(x)
+
 class RotaryPositionalEmbedding(nn.Module):
     def __init__(self, theta: float, d_k: int, max_seq_len: int, device=None):
         super().__init__()
-        positions = torch.arange(0, max_seq_len, 1)
-        freq = 1 / theta ** ((torch.arange(0, d_k, 2) ).float() / d_k)
+        positions = torch.arange(0, max_seq_len, 1,device=device)
+        freq = 1 / theta ** ((torch.arange(0, d_k, 2 ,device=device)).float() / d_k)
         freqs = torch.outer(positions, freq)
         self.register_buffer("cos_cache", torch.cos(freqs), persistent=False)
         self.register_buffer("sin_cache", torch.sin(freqs), persistent=False)
@@ -108,7 +115,7 @@ class multihead_self_attention_with_rope(nn.Module):
         ##token_positions = token_positions.unsqueeze(1)
         q = self.rope(q, token_positions)
         k = self.rope(k, token_positions)
-        a = torch.ones(q.size(-2), q.size(-2))
+        a = torch.ones(q.size(-2), q.size(-2),device=q.device)
         mask = torch.tril(a, diagonal=0).bool()
         out = scaled_dot_product_attention(q, k, v, mask)
         out = rearrange(out, "... h n d_v -> ... n h d_v")
@@ -136,7 +143,7 @@ class multihead_self_attention(nn.Module):
         q = rearrange(q, "... n (h d_k) -> ... h n d_k", h=self.heads)
         k = rearrange(k, "... n (h d_k) -> ... h n d_k", h=self.heads)
         v = rearrange(v, "... n (h d_v) -> ... h n d_v", h=self.heads)
-        a = torch.ones(q.size(-2), q.size(-2))
+        a = torch.ones(q.size(-2), q.size(-2), device=q.device)
         mask = torch.tril(a, diagonal=0).bool()
         out = scaled_dot_product_attention(q, k, v, mask)
         out = rearrange(out, "... h n d_m -> ... n (h d_m)")
@@ -256,16 +263,16 @@ def save_checkpoint(model, optimizer, iteration, out):
     }
     torch.save(checkpoint, out)
 
-def load_checkpoint(src, model, optimizer):
-    checkpoint = torch.load(src)
+def load_checkpoint(src, model, optimizer, device=None):
+    checkpoint = torch.load(src, map_location = device)
     model.load_state_dict(checkpoint["model_state"])
     optimizer.load_state_dict(checkpoint["optimizer_state"])
     t = checkpoint["t"]
     return t
 
-def decoding(model, prompt_ids, max_new_tokens, temperature, top_p, eot_id):
+def decoding(model, prompt_ids, max_new_tokens, temperature, top_p, eot_id, device=None ):
     model.eval()
-    x = torch.tensor(prompt_ids, dtype=torch.long).squeeze(-1)
+    x = torch.tensor(prompt_ids, dtype=torch.long).squeeze(-1).to(device)
     with torch.no_grad:
         for _ in range(max_new_tokens):
             logits = model(x)[..., -1, ...]
