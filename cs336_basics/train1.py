@@ -16,32 +16,22 @@ from cs336_basics.transformer import (
     load_checkpoint,
 )
 
-
-@torch.no_grad()
-def estimate_loss(model, train_data, val_data, args, device):
+@torch.no_grad
+def estimate_losses(model, args, train_data, val_data, device):
     model.eval()
-
     out = {}
-    for split, data in [("train", train_data), ("val", val_data)]:
+
+    for split, data in [("train", train_data), ("valid", val_data)]:
         losses = []
-
         for _ in range(args.eval_iters):
-            x, y = get_batch(
-                data,
-                batch_size=args.batch_size,
-                context_length=args.context_length,
-                device=device,
-            )
-
+            x, y = get_batch(data, args.batch_size, args.context_length, device=device)
             logits = model(x)
             loss = cross_entropy(logits, y)
             losses.append(loss.item())
-
         out[split] = sum(losses) / len(losses)
 
     model.train()
     return out
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -91,10 +81,9 @@ def main():
     parser.add_argument("--wandb_run_name", type=str, default=None)
 
     args = parser.parse_args()
-
+    
     os.makedirs(args.out_dir, exist_ok=True)
     checkpoint_path = os.path.join(args.out_dir, args.checkpoint_name)
-
     device = torch.device(args.device)
 
     # 使用 np.memmap 加载大数据集
@@ -124,7 +113,7 @@ def main():
     if args.resume is not None:
         start_iter = load_checkpoint(args.resume, model, optimizer)
         print(f"Resumed from checkpoint {args.resume}, starting at iteration {start_iter}")
-
+    
     if args.wandb:
         import wandb
 
@@ -135,95 +124,3 @@ def main():
         )
 
     model.train()
-
-    t0 = time.time()
-
-    for iteration in range(start_iter, args.max_iters):
-        # 设置当前学习率
-        lr = get_lr_cosine_schedule(
-            t=iteration,
-            alpha_max=args.lr,
-            alpha_min=args.min_lr,
-            T_w=args.warmup_iters,
-            T_c=args.max_iters,
-        )
-
-        for param_group in optimizer.param_groups:
-            param_group["lr"] = lr
-
-        # 取 batch
-        x, y = get_batch(
-            train_data,
-            batch_size=args.batch_size,
-            context_length=args.context_length,
-            device=device,
-        )
-
-        # forward
-        logits = model(x)
-        loss = cross_entropy(logits, y)
-
-        # backward
-        optimizer.zero_grad()
-        loss.backward()
-
-        # 梯度裁剪
-        if args.grad_clip is not None and args.grad_clip > 0:
-            gradient_clipping(model.parameters(), args.grad_clip)
-
-        optimizer.step()
-
-        # 日志
-        if iteration % args.log_interval == 0:
-            dt = time.time() - t0
-            t0 = time.time()
-
-            print(
-                f"iter {iteration:6d} | "
-                f"loss {loss.item():.4f} | "
-                f"lr {lr:.6e} | "
-                f"time {dt:.2f}s"
-            )
-
-            if args.wandb:
-                wandb.log(
-                    {
-                        "train/loss": loss.item(),
-                        "lr": lr,
-                        "iter": iteration,
-                    },
-                    step=iteration,
-                )
-
-        # 验证
-        if iteration % args.eval_interval == 0 and iteration > 0:
-            losses = estimate_loss(model, train_data, val_data, args, device)
-
-            print(
-                f"[eval] iter {iteration:6d} | "
-                f"train loss {losses['train']:.4f} | "
-                f"val loss {losses['val']:.4f}"
-            )
-
-            if args.wandb:
-                wandb.log(
-                    {
-                        "eval/train_loss": losses["train"],
-                        "eval/val_loss": losses["val"],
-                        "iter": iteration,
-                    },
-                    step=iteration,
-                )
-
-        # 保存 checkpoint
-        if iteration % args.save_interval == 0 and iteration > 0:
-            save_checkpoint(model, optimizer, iteration, checkpoint_path)
-            print(f"Saved checkpoint to {checkpoint_path}")
-
-    # 最后保存一次
-    save_checkpoint(model, optimizer, args.max_iters, checkpoint_path)
-    print(f"Training finished. Final checkpoint saved to {checkpoint_path}")
-
-
-if __name__ == "__main__":
-    main()
